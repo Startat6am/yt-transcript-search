@@ -10,6 +10,9 @@ from typing import Any
 
 import requests
 from dotenv import load_dotenv
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill
+from openpyxl.utils import get_column_letter
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
@@ -199,6 +202,47 @@ def search_segments(query: str) -> None:
         print(f"[{row['start_time']}] {row['title']} — {row['text']}\n  {row['timestamp_url']}\n")
 
 
+
+def export_xlsx() -> None:
+    """Export the available CSV tables to a formatted Excel workbook."""
+    tables = [
+        ("Videos", DATA / "videos.csv", VIDEO_FIELDS),
+        ("Segments", DATA / "segments.csv", SEGMENT_FIELDS),
+        ("SearchResults", DATA / "search_results.csv", SEGMENT_FIELDS),
+    ]
+    wb = Workbook()
+    first = True
+    for sheet_name, path, fields in tables:
+        if first:
+            ws = wb.active
+            ws.title = sheet_name
+            first = False
+        else:
+            ws = wb.create_sheet(sheet_name)
+        rows = read_csv(path)
+        ws.append(fields)
+        for row in rows:
+            ws.append([row.get(field, "") for field in fields])
+        ws.freeze_panes = "A2"
+        ws.auto_filter.ref = ws.dimensions
+        for cell in ws[1]:
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill("solid", fgColor="1F4E78")
+        for col_idx, field in enumerate(fields, start=1):
+            values = [str(ws.cell(row=r, column=col_idx).value or "") for r in range(1, min(ws.max_row, 200) + 1)]
+            width = min(max([len(field)] + [len(v) for v in values]) + 2, 60)
+            ws.column_dimensions[get_column_letter(col_idx)].width = max(width, 12)
+        if sheet_name in ("Segments", "SearchResults"):
+            for row_idx in range(2, ws.max_row + 1):
+                link_cell = ws.cell(row=row_idx, column=fields.index("timestamp_url") + 1)
+                if link_cell.value:
+                    link_cell.hyperlink = link_cell.value
+                    link_cell.style = "Hyperlink"
+    output = DATA / "youtube_transcripts.xlsx"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    wb.save(output)
+    print(f"Saved Excel workbook to {output}")
+
 def main() -> None:
     load_dotenv(ROOT / ".env")
     parser = argparse.ArgumentParser(description="Build and search a YouTube transcript catalogue.")
@@ -208,6 +252,7 @@ def main() -> None:
     sub.add_parser("import-transcripts", help="Import authorized .vtt files from data/transcripts")
     search = sub.add_parser("search", help="Search imported transcript segments")
     search.add_argument("query", help="Word, phrase, or hashtag; wrap exact phrases in double quotes")
+    sub.add_parser("export-xlsx", help="Export videos, transcript segments, and latest search results to Excel")
     args = parser.parse_args()
     if args.command == "catalog":
         collect_catalog(args.channel_id)
@@ -215,6 +260,8 @@ def main() -> None:
         import_transcripts()
     elif args.command == "search":
         search_segments(args.query)
+    elif args.command == "export-xlsx":
+        export_xlsx()
 
 
 if __name__ == "__main__":
