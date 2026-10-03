@@ -139,7 +139,7 @@ def parse_vtt(path: Path, title_by_id: dict[str, str]) -> list[dict[str, str]]:
         text = clean_vtt_text(" ".join(text_lines))
         if not text or end < start:
             continue
-        hashtags = " ".join(sorted({tag.lower() for tag in re.findall(r"(?<!\\w)#[\\w]+", text, flags=re.UNICODE)}))
+        hashtags = " ".join(sorted({tag.lower() for tag in re.findall(r"(?<!\w)#[\w]+", text, flags=re.UNICODE)}))
         url = f"https://www.youtube.com/watch?v={video_id}"
         rows.append({
             "video_id": video_id,
