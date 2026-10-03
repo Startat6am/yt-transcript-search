@@ -1,0 +1,31 @@
+name: Update YouTube catalogue
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  catalog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Collect public video catalogue
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+        run: python -m src.main catalog --channel-id UCl0p-aoACzTOgnCctzIQWPQ
+      - name: Upload catalogue CSV
+        uses: actions/upload-artifact@v4
+        with:
+          name: youtube-video-catalogue
+          path: data/videos.csv
+          if-no-files-found: error
+          retention-days: 14
