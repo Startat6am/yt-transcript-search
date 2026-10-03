@@ -60,6 +60,16 @@ python -m src.main search '"exact phrase"'
 
 Search results are printed and written to `data/search_results.csv`. Open the CSV in Google Sheets or Excel.
 
+## Export to Excel
+
+After collecting the catalogue and importing transcript files, run:
+
+```bash
+python -m src.main export-xlsx
+```
+
+This creates `data/youtube_transcripts.xlsx` with separate Videos, Segments, and SearchResults sheets. Timestamp URLs are clickable. GitHub Actions includes a test workflow and a daily public video-catalogue refresh. To enable the catalogue workflow, add a repository secret named `YOUTUBE_API_KEY` in Settings → Secrets and variables → Actions. The workflow uploads the generated CSV as an artifact; it does not automatically write to Google Sheets.
+
 ## CSV outputs
 
 - `data/videos.csv`: video metadata
